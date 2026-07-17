@@ -2,47 +2,74 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
-from fastapi import FastAPI, HTTPException,Response
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
 
-# ------------------------------------------------------------
-# Application paths
-# ------------------------------------------------------------
+# ============================================================
+# APPLICATION PATHS
+# ============================================================
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-MODEL_PATH = BASE_DIR / "model" / "delivery_delay_model.pkl"
+
+MODEL_PATH = (
+    BASE_DIR
+    / "model"
+    / "delivery_delay_model.pkl"
+)
+
+TEMPLATE_DIRECTORY = BASE_DIR / "templates"
+STATIC_DIRECTORY = BASE_DIR / "static"
 
 
-# ------------------------------------------------------------
-# Load the trained model
-# ------------------------------------------------------------
+# ============================================================
+# LOAD TRAINED MODEL
+# ============================================================
 
 try:
     model = joblib.load(MODEL_PATH)
+
 except Exception as exc:
     raise RuntimeError(
         f"Unable to load model from {MODEL_PATH}: {exc}"
     ) from exc
 
 
-# ------------------------------------------------------------
-# FastAPI application
-# ------------------------------------------------------------
+# ============================================================
+# CREATE FASTAPI APPLICATION
+# ============================================================
 
 app = FastAPI(
-    title="Logistics Late-Delivery Prediction API",
+    title="Logistics Late-Delivery Prediction System",
     description=(
-        "Predicts whether a logistics order is likely "
-        "to be delivered late."
+        "Predicts the risk that a logistics order "
+        "will be delivered late."
     ),
     version="1.0.0"
 )
 
 
-# ------------------------------------------------------------
-# Input schema
-# ------------------------------------------------------------
+# ============================================================
+# CONFIGURE TEMPLATES AND STATIC FILES
+# ============================================================
+
+app.mount(
+    "/static",
+    StaticFiles(directory=STATIC_DIRECTORY),
+    name="static"
+)
+
+templates = Jinja2Templates(
+    directory=TEMPLATE_DIRECTORY
+)
+
+
+# ============================================================
+# INPUT SCHEMA
+# ============================================================
 
 class OrderInput(BaseModel):
     price: float = Field(ge=0)
@@ -77,32 +104,41 @@ FEATURE_COLUMNS = [
 ]
 
 
-# ------------------------------------------------------------
-# API endpoints
-# ------------------------------------------------------------
+# ============================================================
+# WEB INTERFACE
+# ============================================================
 
-@app.get("/")
-def root():
-    return {
-        "message": "Logistics late-delivery API is running",
-        "documentation": "/docs"
-    }
+@app.get(
+    "/",
+    response_class=HTMLResponse
+)
+async def prediction_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={}
+    )
 
+
+# ============================================================
+# HEALTH ENDPOINT
+# ============================================================
 
 @app.get("/health")
-def health():
+def health_check():
     return {
         "status": "healthy",
-        "model_loaded": True
+        "model_loaded": True,
+        "service": "logistics-delay-prediction-api"
     }
 
-@app.get("/favicon.ico", include_in_schema=False)
-def favicon():
-    return Response(status_code=204)
 
+# ============================================================
+# PREDICTION ENDPOINT
+# ============================================================
 
 @app.post("/predict")
-def predict(order: OrderInput):
+def predict_delivery(order: OrderInput):
     try:
         order_dictionary = order.model_dump()
 
@@ -121,10 +157,23 @@ def predict(order: OrderInput):
 
         if probability >= 0.70:
             risk_level = "high"
+            recommended_action = (
+                "Immediately monitor the shipment and "
+                "notify logistics staff."
+            )
+
         elif probability >= 0.40:
             risk_level = "medium"
+            recommended_action = (
+                "Increase shipment monitoring and "
+                "check carrier progress."
+            )
+
         else:
             risk_level = "low"
+            recommended_action = (
+                "Continue normal order processing."
+            )
 
         return {
             "late_delivery_prediction": prediction,
@@ -136,7 +185,8 @@ def predict(order: OrderInput):
                 probability * 100,
                 2
             ),
-            "risk_level": risk_level
+            "risk_level": risk_level,
+            "recommended_action": recommended_action
         }
 
     except Exception as exc:
@@ -144,4 +194,3 @@ def predict(order: OrderInput):
             status_code=500,
             detail=f"Prediction failed: {exc}"
         ) from exc
-

@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Logistics Delay Prediction</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', path='/styles.css') }}"
+    >
+</head>
+
+<body>
+
+    <header class="page-header">
+        <div class="header-content">
+            <h1>Logistics Delay Prediction System</h1>
+
+            <p>
+                Enter the order information to estimate its
+                late-delivery risk.
+            </p>
+        </div>
+    </header>
+
+
+    <main class="page-container">
+
+        <section class="form-card">
+
+            <h2>Order Information</h2>
+
+            <form id="prediction-form">
+
+                <div class="form-grid">
+
+                    <div class="form-group">
+                        <label for="order_id">Order ID</label>
+
+                        <input
+                            type="text"
+                            id="order_id"
+                            value="ORDER-1001"
+                            required
+                        >
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="price">Total Price</label>
+
+                        <input
+                            type="number"
+                            id="price"
+                            value="180"
+                            min="0"
+                            step="0.01"
+                            required
+                        >
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="freight_value">
+                            Freight Value
+                        </label>
+
+                        <input
+                            type="number"
+                            id="freight_value"
+                            value="35"
+                            min="0"
+                            step="0.01"
+                            required
+                        >
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="product_weight_g">
+                            Product Weight (grams)
+                        </label>
+
+                        <input
+                            type="number"
+                            id="product_weight_g"
+                            value="2200"
+                            min="0"
+                            step="0.01"
+                            required
+                        >
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="product_volume_cm3">
+                            Product Volume (cm³)
+                        </label>
+
+                        <input
+                            type="number"
+                            id="product_volume_cm3"
+                            value="18000"
+                            min="0"
+                            step="0.01"
+                            required
+                        >
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="number_of_items">
+                            Number of Items
+                        </label>
+
+                        <input
+                            type="number"
+                            id="number_of_items"
+                            value="2"
+                            min="1"
+                            required
+                        >
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="estimated_delivery_days">
+                            Estimated Delivery Days
+                        </label>
+
+                        <input
+                            type="number"
+                            id="estimated_delivery_days"
+                            value="12"
+                            min="0"
+                            required
+                        >
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="purchase_month">
+                            Purchase Month
+                        </label>
+
+                        <select id="purchase_month" required>
+                            <option value="1">January</option>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5">May</option>
+                            <option value="6" selected>June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="purchase_weekday">
+                            Purchase Weekday
+                        </label>
+
+                        <select id="purchase_weekday" required>
+                            <option value="0">Monday</option>
+                            <option value="1">Tuesday</option>
+                            <option value="2" selected>
+                                Wednesday
+                            </option>
+                            <option value="3">Thursday</option>
+                            <option value="4">Friday</option>
+                            <option value="5">Saturday</option>
+                            <option value="6">Sunday</option>
+                        </select>
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="purchase_hour">
+                            Purchase Hour
+                        </label>
+
+                        <input
+                            type="number"
+                            id="purchase_hour"
+                            value="14"
+                            min="0"
+                            max="23"
+                            required
+                        >
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="customer_state">
+                            Customer State
+                        </label>
+
+                        <input
+                            type="text"
+                            id="customer_state"
+                            value="SP"
+                            maxlength="2"
+                            required
+                        >
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="seller_state">
+                            Seller State
+                        </label>
+
+                        <input
+                            type="text"
+                            id="seller_state"
+                            value="RJ"
+                            maxlength="2"
+                            required
+                        >
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="same_state">
+                            Same State?
+                        </label>
+
+                        <select id="same_state" required>
+                            <option value="1">
+                                Yes
+                            </option>
+
+                            <option value="0" selected>
+                                No
+                            </option>
+                        </select>
+                    </div>
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    id="predict-button"
+                    class="predict-button"
+                >
+                    Predict Delivery Risk
+                </button>
+
+            </form>
+
+        </section>
+
+
+        <section
+            id="result-card"
+            class="result-card hidden"
+        >
+
+            <h2>Prediction Result</h2>
+
+            <div id="risk-badge" class="risk-badge">
+                Pending
+            </div>
+
+            <div class="result-grid">
+
+                <div class="result-item">
+                    <span class="result-label">
+                        Order ID
+                    </span>
+
+                    <strong id="result-order-id">
+                        -
+                    </strong>
+                </div>
+
+
+                <div class="result-item">
+                    <span class="result-label">
+                        Prediction
+                    </span>
+
+                    <strong id="result-prediction">
+                        -
+                    </strong>
+                </div>
+
+
+                <div class="result-item">
+                    <span class="result-label">
+                        Risk Percentage
+                    </span>
+
+                    <strong id="result-percentage">
+                        -
+                    </strong>
+                </div>
+
+            </div>
+
+
+            <div class="progress-container">
+                <div
+                    id="progress-bar"
+                    class="progress-bar"
+                ></div>
+            </div>
+
+
+            <div class="recommendation-box">
+
+                <h3>Recommended Action</h3>
+
+                <p id="result-action">
+                    -
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <section
+            id="error-card"
+            class="error-card hidden"
+        >
+
+            <h2>Prediction Error</h2>
+
+            <p id="error-message"></p>
+
+        </section>
+
+    </main>
+
+
+    <script>
+
+        const form = document.getElementById(
+            "prediction-form"
+        );
+
+        const predictButton = document.getElementById(
+            "predict-button"
+        );
+
+        const resultCard = document.getElementById(
+            "result-card"
+        );
+
+        const errorCard = document.getElementById(
+            "error-card"
+        );
+
+
+        form.addEventListener(
+            "submit",
+            async function (event) {
+
+                event.preventDefault();
+
+                resultCard.classList.add("hidden");
+                errorCard.classList.add("hidden");
+
+                predictButton.disabled = true;
+                predictButton.textContent =
+                    "Generating Prediction...";
+
+
+                const orderId = document.getElementById(
+                    "order_id"
+                ).value;
+
+
+                const requestBody = {
+                    price: Number(
+                        document.getElementById(
+                            "price"
+                        ).value
+                    ),
+
+                    freight_value: Number(
+                        document.getElementById(
+                            "freight_value"
+                        ).value
+                    ),
+
+                    product_weight_g: Number(
+                        document.getElementById(
+                            "product_weight_g"
+                        ).value
+                    ),
+
+                    product_volume_cm3: Number(
+                        document.getElementById(
+                            "product_volume_cm3"
+                        ).value
+                    ),
+
+                    number_of_items: Number(
+                        document.getElementById(
+                            "number_of_items"
+                        ).value
+                    ),
+
+                    estimated_delivery_days: Number(
+                        document.getElementById(
+                            "estimated_delivery_days"
+                        ).value
+                    ),
+
+                    purchase_month: Number(
+                        document.getElementById(
+                            "purchase_month"
+                        ).value
+                    ),
+
+                    purchase_weekday: Number(
+                        document.getElementById(
+                            "purchase_weekday"
+                        ).value
+                    ),
+
+                    purchase_hour: Number(
+                        document.getElementById(
+                            "purchase_hour"
+                        ).value
+                    ),
+
+                    same_state: Number(
+                        document.getElementById(
+                            "same_state"
+                        ).value
+                    ),
+
+                    customer_state:
+                        document.getElementById(
+                            "customer_state"
+                        ).value.trim().toUpperCase(),
+
+                    seller_state:
+                        document.getElementById(
+                            "seller_state"
+                        ).value.trim().toUpperCase()
+                };
+
+
+                try {
+
+                    const response = await fetch(
+                        "/predict",
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+
+                            body: JSON.stringify(
+                                requestBody
+                            )
+                        }
+                    );
+
+
+                    const data = await response.json();
+
+
+                    if (!response.ok) {
+                        throw new Error(
+                            data.detail
+                            || "Prediction request failed."
+                        );
+                    }
+
+
+                    document.getElementById(
+                        "result-order-id"
+                    ).textContent = orderId;
+
+
+                    document.getElementById(
+                        "result-prediction"
+                    ).textContent =
+                        data.late_delivery_prediction === 1
+                            ? "Predicted Late"
+                            : "Predicted On Time";
+
+
+                    document.getElementById(
+                        "result-percentage"
+                    ).textContent =
+                        `${data.risk_percentage}%`;
+
+
+                    document.getElementById(
+                        "result-action"
+                    ).textContent =
+                        data.recommended_action;
+
+
+                    const riskBadge =
+                        document.getElementById(
+                            "risk-badge"
+                        );
+
+                    riskBadge.textContent =
+                        `${data.risk_level.toUpperCase()} RISK`;
+
+                    riskBadge.className =
+                        `risk-badge ${data.risk_level}`;
+
+
+                    const progressBar =
+                        document.getElementById(
+                            "progress-bar"
+                        );
+
+                    progressBar.style.width =
+                        `${data.risk_percentage}%`;
+
+                    progressBar.className =
+                        `progress-bar ${data.risk_level}`;
+
+
+                    resultCard.classList.remove(
+                        "hidden"
+                    );
+
+                    resultCard.scrollIntoView({
+                        behavior: "smooth"
+                    });
+
+                } catch (error) {
+
+                    document.getElementById(
+                        "error-message"
+                    ).textContent = error.message;
+
+                    errorCard.classList.remove(
+                        "hidden"
+                    );
+
+                } finally {
+
+                    predictButton.disabled = false;
+
+                    predictButton.textContent =
+                        "Predict Delivery Risk";
+                }
+            }
+        );
+
+    </script>
+
+</body>
+</html>
